@@ -1,4 +1,5 @@
 from typing import Optional
+from tqdm import tqdm
 
 import numpy as np
 from futuresight.types import MagicCard, MagicDeck, FSGameOutcome, FSGameParams
@@ -18,15 +19,18 @@ def create_m_n_deck(m: int, n: int, seed: int = 0) -> MagicDeck:
     return MagicDeck(qual_cards + noqual_cards, rng=rng)
 
 
-def fs_round_action(deck: MagicDeck, game: FSGameParams) -> int:
+def fs_round_action(deck: MagicDeck, max_plays: int, max_scries: int) -> int:
     """Future sight round action.
-    Play of to max_draws from the top of the library if they have
+    Play of to max_draws from the top of the library. If you see a brick,
+    perfmorm up to max scries.
     """
-    avail_cards = game.round_max  # number of cards that I can still play
-    avail_scries = game.scry_max  # number of scries I can take this round
+    avail_cards = max_plays  # number of cards that I can still play
+    avail_scries = max_scries  # number of scries I can take this round
     played_cards = 0
     while (deck.decksize() > 0) and (avail_cards > 0):
         topcard = deck.observe_a_card()
+        print(topcard)
+        input("go on")
         if topcard.has_qual:
             # the top card can be casted
             deck.play_a_card()
@@ -40,6 +44,37 @@ def fs_round_action(deck: MagicDeck, game: FSGameParams) -> int:
             # QUIT when top card is a brick and I don't have any scries left
             break
     return played_cards
+
+
+def simulate_fs_deck(
+    deck: MagicDeck,
+    max_plays: int,
+    max_scries: int,
+    rounds: Optional[int] = None,
+) -> FSGameOutcome:
+    """Simulate how many cards a future sight effect will draw on a set deck.
+    Each round, play up to max_plays cards from top of library, whith up to
+    max_scries available if you see bricks.
+    The game will end as soon as the number of rounds finishes or the deck is
+    empty.
+
+    Returns:
+        FSGameOutcome: Result of the game
+    """
+    real_rounds = 0
+    virtual_draws = 0
+    # Play the game until the library is empty of the rounds are over
+    while deck.decksize() > 0:
+        deck.play_a_card()  # cards you draw in a turn
+        real_rounds += 1
+        if (rounds is not None) and (real_rounds > rounds):
+            break
+        virtual_draws += fs_round_action(deck, max_plays, max_scries)
+    if real_rounds > 0:
+        avg_draws = virtual_draws / real_rounds
+    else:
+        avg_draws = 0
+    return FSGameOutcome(rounds=real_rounds, virtual_draws=virtual_draws, dpr=avg_draws)
 
 
 def simulate_fs_game(
@@ -59,20 +94,36 @@ def simulate_fs_game(
     """
     deck = create_m_n_deck(game.m, game.n, seed)
     deck.shuffle()
-    real_rounds = 0
-    virtual_draws = 0
     # Remove init_hand_size cards from the top of the library
     if init_hand_size > 0:
         for _ in range(init_hand_size):
             if deck.decksize() == 0:
                 break
             deck.play_a_card()
-    # Play the game until the library is empty of the rounds are over
-    while deck.decksize() > 0:
-        deck.play_a_card()  # cards you draw in a turn
-        real_rounds += 1
-        if (rounds is not None) and (real_rounds > rounds):
-            break
-        virtual_draws += fs_round_action(deck, game)
-    avg_draws = virtual_draws / real_rounds
-    return FSGameOutcome(rounds=real_rounds, virtual_draws=virtual_draws, dpr=avg_draws)
+    return simulate_fs_deck(
+        deck,
+        game.round_max,
+        game.round_max,
+        rounds=rounds,
+    )
+
+
+def simulate_n_fs_games(
+    game: FSGameParams,
+    n: int,
+    rounds: Optional[int] = None,
+    init_hand_size: int = 0,
+    quiet: bool = True,
+) -> float:
+    """Take the average of simulating N future sight games.
+    This can be slow for big values of N. Set quiet = False to showcase
+    a progress bar.
+
+    Returns:
+        - float: average number of card drawn in each game
+    """
+    ratio = 0
+    for i in tqdm(range(n), disable=quiet):
+        outcome = simulate_fs_game(game, rounds, seed=i, init_hand_size=init_hand_size)
+        ratio += outcome.dpr
+    return ratio / n

@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import NamedTuple
 
 import numpy as np
@@ -17,8 +17,8 @@ class MagicCard:
     """Simple class to represent a magic the gathering card that might or might
     not have a specified quality used to check conditional future sight effects,
     such as Oracle of Mul Daya, Nalia  or Gaelia.
-    Unique enumerable qualities (like being being the specific members of a
-    party) are also supported.
+    Unique enumerable qualities (like being the specific members of a party)
+    are also supported.
     """
 
     card_id: int
@@ -35,21 +35,20 @@ class MagicDeck:
     """
 
     cards: list[MagicCard]
-    rng: np.random.Generator
 
     def decksize(self) -> int:
         """return current decks size"""
         return len(self.cards)
 
     def add_cards(self, card: MagicCard, to_bottom: bool = False):
-        """add a magic card to a deck (optionally: to bottom of library"""
+        """add a magic card to a deck (optionally: to bottom of library)"""
         if to_bottom:
-            self.cards.insert(0, MagicCard)
+            self.cards.insert(0, card)
         self.cards.append(card)
 
-    def shuffle(self):
+    def shuffle(self, rng: np.random.Generator):
         """shuffle the deck"""
-        self.rng.shuffle(self.cards)
+        rng.shuffle(self.cards)  # type: ignore
 
     def observe_a_card(self) -> MagicCard:
         """look at the top card of you library"""
@@ -87,7 +86,7 @@ class MagicDeck:
 
 class FSGameOutcome(NamedTuple):
     rounds: int
-    virtual_draws: int
+    virtual_draws: list[int]
     dpr: float  # average draw per round
 
 
@@ -106,4 +105,4 @@ class FSGameParams(NamedTuple):
     m: int  # number of cards with given quality
     n: int  # number of cards in deck
     round_max: int  # maximum number of cards you can play in a round
-    scry_max: int = 0  # number of scries you can take in a round
+    scry_max: int  # number of scries you can take in a round

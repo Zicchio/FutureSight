@@ -86,7 +86,7 @@ class MagicDeck:
 
 class FSGameOutcome(NamedTuple):
     rounds: int
-    virtual_draws: list[int]
+    virtual_draws: list[int]  # draws per round
     dpr: float  # average draw per round
 
 

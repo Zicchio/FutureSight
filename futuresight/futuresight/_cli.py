@@ -2,7 +2,7 @@ import argparse
 from typing import NamedTuple
 
 from futuresight.simulation import simulate_n_fs_games
-from futuresight.types import FSGameParams
+from futuresight.types import FSGameParams, FSGameOutcome
 
 DEFAULT_SEED = 20220610
 DEFAULT_TRIALS = 10_000
@@ -35,14 +35,34 @@ def parse_args() -> ProgArgs:
     return ProgArgs(**vars(args_ns))
 
 
+_HP_FILL_ = '#'
+_HP_SEP_H = '—'
+_HP_SEP_V = '|'
+_HP_RIGHT_W = 30
+_HP_LEFT_W = 8
+_HP_TOTAL_W = _HP_LEFT_W + _HP_RIGHT_W + 3
+
+
+def format_fsgame_result(f: float, vpr: list[int]):
+    # print(_HP_SEP_V*_HP_TOTAL_W)
+    print("avg ".rjust(_HP_LEFT_W) + _HP_SEP_V + f" {f}")
+    tot_rounds = sum(vpr)
+    for i, vd in enumerate(vpr):
+        v = vd/tot_rounds  # probability to draw v extra cards in a round
+        bar_w = round(v*_HP_RIGHT_W)
+        print(f"{i} ".rjust(_HP_LEFT_W) + _HP_SEP_V +
+              (_HP_FILL_*bar_w).ljust(_HP_RIGHT_W) + _HP_SEP_V + f" {v}")
+
+
 def main_cli():
     args = parse_args()
-    print("Starting simulaztions")
+    print("Running simulations")
     game = FSGameParams(
         args.numhits,
         args.decksize,
         args.hpt,
         0
     )
-    outcome = simulate_n_fs_games(game, args.t, quiet=False)
-    print(f"Result: {outcome} card per turn")
+    avg, vpr = simulate_n_fs_games(game, args.t, quiet=False)
+    print("Results")
+    format_fsgame_result(avg, vpr)

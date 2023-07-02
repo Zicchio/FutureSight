@@ -115,17 +115,21 @@ def simulate_n_fs_games(
     rounds: Optional[int] = None,
     init_hand_size: int = 0,
     quiet: bool = True,
-) -> float:
+) -> tuple[float, list[int]]:
     """Take the average of simulating N future sight games.
     This can be slow for big values of N. Set quiet = False to showcase
     a progress bar.
 
     Returns:
-        - float: average number of card drawn in each game
+        - float: average number of card drawn in each game.
+        - list[int]: distribution with the number of draws.
     """
     ratio = 0
+    draws_dist = [0 for _ in range(game.round_max+1)]
     for i in tqdm(range(n), disable=quiet):
         outcome = simulate_fs_game(
             game, rounds, seed=i, init_hand_size=init_hand_size)
         ratio += outcome.dpr
-    return ratio / n
+        for v in outcome.virtual_draws:
+            draws_dist[v] += 1
+    return ratio / n, draws_dist

@@ -14,4 +14,4 @@ Practical example include
 from futuresight.types import FSGameParams, FSGameOutcome
 from futuresight.simulation import simulate_fs_game, simulate_n_fs_games
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
